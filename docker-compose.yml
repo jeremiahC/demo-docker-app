@@ -1,0 +1,78 @@
+version: '3'
+services:
+
+  #PHP Service
+  backend:
+    image: php:8.1-fpm
+    container_name: backend
+    restart: unless-stopped
+    tty: true
+    working_dir: /var/www/api
+    ports:
+      - "9001:9000"
+    volumes:
+       - ./api:/var/www/api
+       - ./api/docker-config/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network
+
+  # Node Service
+  client:
+    image: node:12.22.1-alpine
+    container_name: client
+    restart: unless-stopped
+    tty: true
+    working_dir: /var/www/client
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/var/www/client
+      - /var/www/client/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true yarn start
+    networks:
+      - app-network 
+
+  # Nginx Service
+  server:
+    image: nginx:alpine
+    container_name: server
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "8050:80"
+      - "8443:443"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - app-network
+
+  # MySQL Service
+  database:
+    image: mysql:5.7.22
+    container_name: database
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: ojt-docker
+      MYSQL_USER: ojt
+      MYSQL_PASSWORD: ojtdocker
+      MYSQL_ROOT_PASSWORD: ojtdocker
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+
+#Volumes
+volumes:
+  dbdata:
+    driver: local
+
